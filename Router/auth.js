@@ -499,7 +499,7 @@ Routers.get("/api/v1/getdonationid/:id", async (req, res) => {
 // });
 
 // Serve static HTML file with QR code for payment link
-app.get("/payment/:id", (req, res) => {
+app.get("/api/payment/:id", (req, res) => {
   const { id } = req.params;
   const paymentLink = paymentLinks.find((link) => link.id === id);
 
@@ -558,7 +558,7 @@ async function generatePaymentLink_with_Order_ID(user, amount, currency, OrderId
 }
 
 // Endpoint for generating payment links
-Routers.post('/GetLinkbyApiKey', async (req, res) => {
+Routers.post('/api/GetLinkbyApiKey', async (req, res) => {
   const apiKey = req.query.id;
   const amount = req.query.amount;
   const currency = req.query.currency;
@@ -588,7 +588,7 @@ Routers.post('/GetLinkbyApiKey', async (req, res) => {
 });
 
 // Endpoint for checking payment status
-Routers.post('/getStatus', async (req, res) => {
+Routers.post('/api/getStatus', async (req, res) => {
   const apiKey = req.query.apikey;
   const orderId = req.query.orderId;
 

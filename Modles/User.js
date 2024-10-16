@@ -56,6 +56,41 @@ const userSchema = new mongoose.Schema({
       },
     },
   ],
+  donationLinks: [
+    {
+      qrCode:{
+        type: String,
+      },
+      note: {
+        type: String,
+      },
+      currency: {
+        type: String,
+      },
+      amount: {
+        type: String,
+      },
+      privateKey:{
+        type: String,
+      }, 
+      uniqueid:{
+        type: String,
+      },
+      address:{
+        type: String,
+      },
+      OrderId:{
+        type: String,
+      },
+      createdat:{
+        type:String
+      },
+      status:{
+        type:String,
+        default:"Pending"
+      },
+    },
+  ],
 },{
   timestamps: true, // Add createdAt and updatedAt for the main User model
 });

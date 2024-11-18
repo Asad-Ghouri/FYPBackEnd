@@ -2574,7 +2574,7 @@ const generatePaymentLink = async (req, res) => {
   }
 };
 
-const qrcode = require('qrcode');
+// const qrcode = require('qrcode');
 
 const generateQRCode = async (address) => {
   try {

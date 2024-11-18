@@ -2502,7 +2502,8 @@ Routers.get(
 
 
 
-Routers.get("/api/v1/getpaymentid/:id", async (req, res) => {
+//api
+Routers.get("/v1/getpaymentid/:id", async (req, res) => {
   try {
     const user = await User.findOne({
       _id: req.params.id, // Match the ObjectId
@@ -2891,7 +2892,8 @@ Routers.get('/PendingPaymentLinksDetail', async (req, res) => {
 // Route to get the total count of payment links with status "done" across all users
 
 
-Routers.post(`/api/generate-donation-link/:id`, async (req, res) => {
+//api
+Routers.post(`/generate-donation-link/:id`, async (req, res) => {
   const { amount, currency, note } = req.body;
   try {
     const user = await User.findById(req.params.id);
@@ -3104,7 +3106,8 @@ Routers.put('/EditUsersApiKey/:userId/:apiKeyId', async (req, res) => {
 });
 
 
-Routers.post(`/api/generate-payment-link/:id`, async (req, res) => {
+//api
+Routers.post(`/generate-payment-link/:id`, async (req, res) => {
   const { amount, currency, note } = req.body;
   try {
     const user = await User.findById(req.params.id);
@@ -3378,7 +3381,9 @@ Routers.get('/DonePayment/:userId', async (req, res) => {
 });
 
 
-Routers.get("/api/v1/getdonationid/:id", async (req, res) => {
+//api
+
+Routers.get("/v1/getdonationid/:id", async (req, res) => {
   try {
     const user = await User.findOne({
       _id: req.params.id, // Match the ObjectId
@@ -3552,7 +3557,9 @@ Routers.post('/getStatus', async (req, res) => {
 Routers.get('/test', (req, res) => {
   res.status(200).json({ message: 'API is working!' });
 });
-Routers.post('/api/getStatus', async (req, res) => {
+
+//api
+Routers.post('/getStatus', async (req, res) => {
   const apiKey = req.query.apikey;
   const orderId = req.query.orderId;
 

@@ -23,6 +23,7 @@ app.use(
 // Parse JSON payloads
 app.use(express.json());
 
+
 // Load and prefix routes with '/api'
 const authRoutes = require('./Router/auth.js');
 app.use('/api', authRoutes); // Add '/api' prefix to all routes in auth.js

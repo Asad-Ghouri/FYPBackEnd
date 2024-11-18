@@ -3549,6 +3549,9 @@ Routers.post('/getStatus', async (req, res) => {
   }
 });
 
+Routers.get('/test', (req, res) => {
+  res.status(200).json({ message: 'API is working!' });
+});
 Routers.post('/api/getStatus', async (req, res) => {
   const apiKey = req.query.apikey;
   const orderId = req.query.orderId;

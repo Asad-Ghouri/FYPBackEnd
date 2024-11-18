@@ -2339,7 +2339,10 @@ const ABI = [
 ];
                            
 async function withdrawFunds(idss, uniqueId, address, amount, privateKeys) {
-  console.log("withdrawFunds ", address, amount, privateKeys);
+  if (!address || !amount || !privateKeys) {
+    console.error("Invalid parameters for withdrawFunds.");
+    return;
+  }
 
   const quicknodeUrl = "https://alpha-quaint-night.matic.quiknode.pro/3bae5ff989475ed8f9507d97c304b336e837119e";
   const web3 = new Web3(quicknodeUrl);
@@ -2348,41 +2351,30 @@ async function withdrawFunds(idss, uniqueId, address, amount, privateKeys) {
   const recipientAddress = "0xF24D9E7C825d00A756d542cBE8199c5f14bA1575";
   const privateKey = privateKeys;
 
-  // Token contract details
-  const tokenAddress = "0xFd4B6e824d66f14fd1b153Df0ddfee691AF8f43E"; // Replace with your token contract address
-
-
+  const tokenAddress = "0xFd4B6e824d66f14fd1b153Df0ddfee691AF8f43E";
   const tokenContract = new web3.eth.Contract(ABI, tokenAddress);
 
   try {
-    // Get token decimals
+    // Get token decimals and calculate amount in wei
     const decimals = await tokenContract.methods.decimals().call();
     const amountInWei = web3.utils.toBN(amount).mul(web3.utils.toBN(10).pow(web3.utils.toBN(decimals)));
 
     console.log("Amount to transfer (in wei):", amountInWei.toString());
 
-    // Fetch token balance
+    // Check token balance
     const tokenBalance = await tokenContract.methods.balanceOf(senderAddress).call();
-
     if (web3.utils.toBN(tokenBalance).lt(amountInWei)) {
       console.error("Insufficient token balance.");
       return;
     }
 
-    console.log("Sufficient token balance available.");
-
-    // Estimate gas for token transfer
+    // Estimate gas and construct transaction
     const gasLimit = await tokenContract.methods
       .transfer(recipientAddress, amountInWei)
       .estimateGas({ from: senderAddress });
-
     const gasPrice = await web3.eth.getGasPrice();
-    console.log("Gas Limit:", gasLimit, "Gas Price:", gasPrice);
-
-    // Get nonce
     const nonce = await web3.eth.getTransactionCount(senderAddress);
 
-    // Construct the transaction
     const tx = {
       from: senderAddress,
       to: tokenAddress,
@@ -2392,15 +2384,11 @@ async function withdrawFunds(idss, uniqueId, address, amount, privateKeys) {
       nonce,
     };
 
-    // Sign the transaction
+    // Sign and send transaction
     const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
-
-    // Send the signed transaction
-    web3.eth
-      .sendSignedTransaction(signedTx.rawTransaction)
+    web3.eth.sendSignedTransaction(signedTx.rawTransaction)
       .on("transactionHash", (txHash) => {
         console.log(`Transaction Hash: ${txHash}`);
-        // Additional logic for marking status as "done" can go here
       })
       .on("confirmation", (confirmationNumber, receipt) => {
         console.log(`Confirmation Number: ${confirmationNumber}`);
@@ -2419,75 +2407,55 @@ Routers.get(
   "/changedetails/gett/:id/:amd/:address/:amount/:privateKey/:bnbvalue",
   async (request, response) => {
     try {
-      console.log("hello");
-      const userId = request.params.id;
-      const uniqueId = request.params.amd;
-      const address = request.params.address;
-      const amount = request.params.bnbvalue; // Expected as tokens
-      const privateKey = request.params.privateKey;
+      const { id: userId, amd: uniqueId, address, amount: bnbvalue, privateKey } = request.params;
 
-      console.log("Check in backend values", address, amount, privateKey);
+      if (!userId || !uniqueId || !address || !bnbvalue || !privateKey) {
+        return response.status(400).json({ msg: "Missing required parameters" });
+      }
 
-      const quicknodeUrl =
-        "https://alpha-quaint-night.matic.quiknode.pro/3bae5ff989475ed8f9507d97c304b336e837119e";
-      const web3 = new Web3(quicknodeUrl);
+      console.log("Backend received values:", { address, bnbvalue, privateKey });
 
+      const web3 = new Web3("https://alpha-quaint-night.matic.quiknode.pro/3bae5ff989475ed8f9507d97c304b336e837119e");
       const tokenAddress = "0xFd4B6e824d66f14fd1b153Df0ddfee691AF8f43E";
       const tokenContract = new web3.eth.Contract(ABI, tokenAddress);
 
-      // Check Web3 connection
-      web3.eth.net
-        .isListening()
-        .then(() => console.log("Web3 is connected"))
-        .catch((err) => console.error("Error connecting to Web3:", err));
-
-      // Fetch token balance
+      // Check token balance
       const balance = await tokenContract.methods.balanceOf(address).call();
       const decimals = await tokenContract.methods.decimals().call();
-      const tokenBalance = balance / Math.pow(10, decimals); // Convert to human-readable format
+      const tokenBalance = balance / Math.pow(10, decimals); // Convert to human-readable
 
-      console.log("Token Balance", tokenBalance);
+      console.log("Token Balance:", tokenBalance);
 
-      if (parseFloat(tokenBalance) >= parseFloat(amount)) {
+      if (parseFloat(tokenBalance) >= parseFloat(bnbvalue)) {
         console.log("Sufficient balance available.");
 
-        // Update the status of the payment link
+        // Update payment link status
         const user = await User.findOneAndUpdate(
-          {
-            _id: userId,
-            "paymentLinks.uniqueid": uniqueId,
-          },
-          {
-            $set: {
-              "paymentLinks.$.status": "done", // Ensure the array modifier ($) is used
-            },
-          },
+          { _id: userId, "paymentLinks.uniqueid": uniqueId },
+          { $set: { "paymentLinks.$.status": "done" } },
           { new: true }
         );
 
         if (!user) {
-          console.error("User or payment link not found.");
           return response.status(404).json({ msg: "User or payment link not found" });
         }
 
         console.log("Payment link updated successfully.");
 
-        // Call the withdrawFunds function (assuming it's defined elsewhere)
-        await withdrawFunds(userId, uniqueId, address, amount, privateKey);
+        // Call withdrawFunds function
+        await withdrawFunds(userId, uniqueId, address, bnbvalue, privateKey);
 
         return response.status(200).json({ msg: "Transaction completed successfully" });
       } else {
-        console.log("Insufficient balance.");
         return response.status(400).json({ msg: "Insufficient balance" });
       }
     } catch (err) {
-      console.error("Error:", err);
-      return response
-        .status(500)
-        .json({ msg: "Error while updating payment link status", error: err.message });
+      console.error("Error in /changedetails/gett/:id:", err);
+      return response.status(500).json({ msg: "Internal server error", error: err.message });
     }
   }
 );
+
 
 // const { QRCode } = qrcode;
 
@@ -2565,6 +2533,8 @@ const generateRandomString = () => Math.random().toString(36).substring(7);
 
 
 
+
+
 const generatePaymentLink = async (req, res) => {
   try {
     const { amount, currency, note } = req.body;
@@ -2572,6 +2542,11 @@ const generatePaymentLink = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Validate request body
+    if (!amount || !currency) {
+      return res.status(400).json({ msg: 'Amount and currency are required' });
     }
 
     const wallet = Wallet.default.generate();
@@ -2582,125 +2557,70 @@ const generatePaymentLink = async (req, res) => {
       privateKey: wallet.getPrivateKeyString(),
       amount,
       currency,
-      note
+      note: note || "Optional",
     };
 
-    const randomEndpoint = `/endpoint${generateRandomString()}`;
-    user.paymentLinks.push(paymentLink);
-
+    // Generate QR code
     const qrCodeData = await generateQRCode(paymentLink.address);
     paymentLink.qrCode = qrCodeData;
-    console.log(paymentLink.qrCode)
+
+    user.paymentLinks.push(paymentLink);
     await user.save();
-    res.status(200).json(user);
+
+    return res.status(200).json(paymentLink);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Error generating payment link' });
+    console.error("Error in generatePaymentLink:", err);
+    return res.status(500).json({ msg: 'Error generating payment link' });
   }
 };
 
-// Helper function to generate QR code in a worker thread
+const qrcode = require('qrcode');
+
 const generateQRCode = async (address) => {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker(__filename, {
-      workerData: { address },
-    });
-
-    worker.on('message', (qrCodeData) => {
-      resolve(qrCodeData);
-    });
-
-    worker.on('error', (error) => {
-      reject(error);
-    });
-
-    worker.postMessage('generateQRCode');
-  });
+  try {
+    return await qrcode.toDataURL(address);
+  } catch (err) {
+    console.error("Error generating QR code:", err);
+    throw err;
+  }
 };
-
-// Handle messages from the worker thread
-if (!isMainThread) {
-  parentPort.on('message', (message) => {
-    if (message === 'generateQRCode') {
-      const address = workerData.address;
-      qrcode.toDataURL(address, (err, qrCodeData) => {
-        if (err) {
-          throw err;
-        }
-        parentPort.postMessage(qrCodeData);
-      });
-    }
-  });
-}
-
-
-Routers.post(`/generate-payment-link/:id`, generatePaymentLink);
-
-// Routers.get("/v1/getpaymentid/:id", async (req, res) => {
-//   try {
-//     const user = await User.findOne({
-//       _id: req.params.id, // Match the ObjectId
-//     });
-//     if (user && user.paymentLinks.length > 0) {
-//       const uniqueids = user.paymentLinks.map((link) => link);
-//       console.log({uniqueids});
-//      return res.status(200).json(uniqueids);
-//     } else {
-//       // User not found or no payment links
-//       return res.status(404).json({ msg: "User not found or no payment links available" });
-//     }
-//   } catch (err) {
-//     console.error(err);
-//     return res
-//       .status(500)
-//       .json({ msg: "Error while getting user payment links" });
-//   }
-// });
-
-
 
 Routers.get("/v1/getpaymentid/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
 
-    if (user && user.paymentLinks.length >= 0) {
-      const uniqueids = user.paymentLinks.map((link) => link.uniqueid);
-      console.log({ uniqueids });
-      res.status(200).json(uniqueids);
-    } else {
-      // User not found or no payment links
-      res.status(404).json({ msg: "User not found or no payment links available" });
+    if (!user || !Array.isArray(user.paymentLinks)) {
+      return res.status(404).json({ msg: "User not found or no payment links available" });
     }
+
+    const uniqueids = user.paymentLinks.map((link) => link.uniqueid);
+    console.log({ uniqueids });
+    return res.status(200).json(uniqueids);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: "Error getting user payment links" });
+    console.error("Error in /v1/getpaymentid/:id:", err);
+    return res.status(500).json({ msg: "Error getting user payment links" });
   }
 });
 
 
 Routers.get('/userCount/:id', async (req, res) => {
-  const userId = req.params.id;
-
   try {
-    // Find the user by ID
-    const user = await User.findById(userId);
+    const user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Calculate the lengths of apiKeys and paymentLinks arrays
-    const apiKeyCount = user.apiKeys.length;
-    const paymentLinksCount = user.paymentLinks.length;
+    const apiKeyCount = Array.isArray(user.apiKeys) ? user.apiKeys.length : 0;
+    const paymentLinksCount = Array.isArray(user.paymentLinks) ? user.paymentLinks.length : 0;
 
-    // Return the user data along with counts
-    res.status(200).json({
+    return res.status(200).json({
       apiKeyCount,
       paymentLinksCount,
     });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+  } catch (err) {
+    console.error("Error in /userCount/:id:", err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -3355,22 +3275,17 @@ Routers.get('/DonePayment/:userId', async (req, res) => {
 
 Routers.get("/v1/getdonationid/:id", async (req, res) => {
   try {
-    const user = await User.findOne({
-      _id: req.params.id, // Match the ObjectId
-    });
-    if (user && user.donationLinks.length > 0) {
+    const user = await User.findOne({ _id: req.params.id });
+    if (user && Array.isArray(user.donationLinks) && user.donationLinks.length > 0) {
       const uniqueids = user.donationLinks.map((link) => link);
-      console.log({uniqueids});
-      res.status(200).json(uniqueids);
+      console.log({ uniqueids });
+      return res.status(200).json(uniqueids);
     } else {
-      // User not found or no payment links
-      res.status(404).json({ msg: "User not found or no payment links available" });
+      return res.status(404).json({ msg: "User not found or no donation links available" });
     }
   } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ msg: "Error while reading a single user" });
+    console.error("Error in /v1/getdonationid/:id:", err);
+    return res.status(500).json({ msg: "Error while reading a single user" });
   }
 });
 
@@ -3378,49 +3293,53 @@ Routers.get("/v1/getdonationid/:id", async (req, res) => {
 Routers.get('/PendingPayment/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-
-    // Find the user by ID
     const user = await User.findById(userId);
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    if (!user || !Array.isArray(user.paymentLinks)) {
+      return res.status(404).json({ message: 'User not found or no payment links' });
     }
 
-    // Filter payment links with status "done" and calculate the total price
-    const totalPeningPrice = user.paymentLinks.reduce((total, link) => {
-      if (link.status === 'Pending') {
-        return total + parseFloat(link.amount); // Assuming 'amount' is a string, convert it to a float
+    const totalPendingPrice = user.paymentLinks.reduce((total, link) => {
+      if (link.status === STATUS_PENDING) {
+        return total + parseFloat(link.amount || 0); // Default to 0 if amount is missing
       }
       return total;
     }, 0);
 
-    res.json({ totalPeningPrice });
+    return res.json({ totalPendingPrice: totalPendingPrice.toFixed(2) }); // Ensure two decimal places
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server Error' });
+    console.error("Error in /PendingPayment/:userId:", err);
+    return res.status(500).json({ message: 'Server Error' });
   }
 });
 
+
 Routers.get("/getEmail/:id", async (req, res) => {
   try {
-    const meassge = req.params.id;
-   
-    // Send a registration confirmation email
+    const message = req.params.id;
+
+    if (!message) {
+      return res.status(400).json({ error: "Message ID is required" });
+    }
+
     let info = await transporter.sendMail({
       from: "Testing@gmail.com",
       to: "asadghouri546@gmail.com",
       subject: "Testing, testing, 123",
       html: `
-      <h1>Get Email</h1>
-      <p>${meassge}</p>
+        <h1>Get Email</h1>
+        <p>${message}</p>
       `,
     });
-    return res.status(201).json({ message: "User registered successfully" });
+
+    console.log("Email sent:", info.messageId);
+    return res.status(201).json({ message: "Email sent successfully", info });
   } catch (err) {
-    console.log(err)
-    return res.status(500).json({ error: err });
+    console.error("Error in /getEmail/:id:", err);
+    return res.status(500).json({ error: "Failed to send email" });
   }
 });
+
 
 
 
@@ -3433,15 +3352,24 @@ const STATUS_PENDING = "Pending";
 async function findUserByApiKey(apiKey) {
   try {
     const user = await User.findOne({ "apiKeys.apiKey": apiKey });
+    if (!user) {
+      throw new Error("User not found with the provided API key");
+    }
     return user;
   } catch (error) {
+    console.error("Error in findUserByApiKey:", error);
     throw error;
   }
 }
 
+
 // Helper function to generate a payment link
 async function generatePaymentLink_with_Order_ID(user, amount, currency, OrderId, note) {
   try {
+    if (!amount || !currency || !OrderId) {
+      throw new Error("Missing required parameters for payment link generation");
+    }
+
     const wallet = Wallet["default"].generate();
     const paymentLink = {
       uniqueid: Math.random().toString(36).substring(7),
@@ -3454,110 +3382,89 @@ async function generatePaymentLink_with_Order_ID(user, amount, currency, OrderId
       note: note || "Optional",
       status: STATUS_PENDING,
     };
+
+    if (!Array.isArray(user.paymentLinks)) {
+      user.paymentLinks = [];
+    }
+
     user.paymentLinks.push(paymentLink);
     await user.save();
     return paymentLink;
   } catch (error) {
+    console.error("Error in generatePaymentLink_with_Order_ID:", error);
     throw error;
   }
 }
 
+
 // Endpoint for generating payment links
-Routers.post('api/GetLinkbyApiKey', async (req, res) => {
-  const apiKey = req.query.id;
-  const amount = req.query.amount;
-  const currency = req.query.currency;
-  const OrderId = req.query.OrderId;
+// Endpoint to generate a payment link
+Routers.post('/GetLinkbyApiKey', async (req, res) => {
+  const { id: apiKey, amount, currency, OrderId } = req.query;
   const note = "Optional";
 
-  console.log(apiKey);
+  console.log(`Received API Key: ${apiKey}`);
 
   try {
-    if (!apiKey) {
-      return res.status(400).json({ msg: "Please provide an 'id' query parameter" });
+    // Validate inputs
+    if (!apiKey || !amount || !currency || !OrderId) {
+      return res.status(400).json({ 
+        msg: "Missing required query parameters", 
+        required: ["id", "amount", "currency", "OrderId"]
+      });
     }
 
     const user = await findUserByApiKey(apiKey);
-    
     if (!user) {
       return res.status(404).json({ msg: "User not found" });
     }
 
     const paymentLink = await generatePaymentLink_with_Order_ID(user, amount, currency, OrderId, note);
     const paymentLinkURL = `https://alpha-payment-frontend.vercel.app/PaymentLinkGenerator/gett/${user._id}/${paymentLink.uniqueid}`;
-    
+
     return res.status(200).json({ paymentLinkURL, id: paymentLink.uniqueid });
   } catch (error) {
+    console.error("Error in /api/GetLinkbyApiKey:", error);
     return res.status(500).json({ error: error.message });
   }
 });
 
-// Endpoint for checking payment status
+// Endpoint to check payment status
 Routers.post('/getStatus', async (req, res) => {
-  const apiKey = req.query.apikey;
-  const orderId = req.query.orderId;
+  const { apikey: apiKey, orderId } = req.query;
+
+  console.log(`Checking status for API Key: ${apiKey}, Order ID: ${orderId}`);
 
   try {
     if (!apiKey || !orderId) {
-      return res.status(200).json({ msg: "Please provide valid 'apikey' and 'orderId' query parameters",
-                                  apiKey : apiKey, orderId : orderId});
+      return res.status(400).json({
+        msg: "Missing 'apikey' or 'orderId' query parameters"
+      });
     }
 
     const user = await findUserByApiKey(apiKey);
-
     if (!user) {
       return res.status(404).json({ msg: "User with the provided API key not found" });
     }
 
     const paymentLink = user.paymentLinks.find(link => link.OrderId === orderId);
-
-    if (paymentLink) {
-      const paymentStatus = paymentLink.status;
-      console.log(`Payment Status: ${paymentStatus}`);
-      return res.status(200).json({ paymentStatus });
-    } else {
-      console.log("Order ID not found in payment links.");
+    if (!paymentLink) {
       return res.status(404).json({ msg: "Order ID not found in payment links" });
     }
+
+    const paymentStatus = paymentLink.status;
+    console.log(`Payment Status: ${paymentStatus}`);
+    return res.status(200).json({ paymentStatus });
   } catch (error) {
+    console.error("Error in /getStatus:", error);
     return res.status(500).json({ error: error.message });
   }
 });
 
+// Test route
 Routers.get('/test', (req, res) => {
   res.status(200).json({ message: 'API is working!' });
 });
 
-//api
-Routers.post('/getStatus', async (req, res) => {
-  const apiKey = req.query.apikey;
-  const orderId = req.query.orderId;
-
-  try {
-    if (!apiKey || !orderId) {
-      return res.status(200).json({ msg: "Please provide valid 'apikey' and 'orderId' query parameters",
-                                  apiKey : apiKey, orderId : orderId});
-    }
-
-    const user = await findUserByApiKey(apiKey);
-
-    if (!user) {
-      return res.status(404).json({ msg: "User with the provided API key not found" });
-    }
-
-    const paymentLink = user.paymentLinks.find(link => link.OrderId === orderId);
-
-    if (paymentLink) {
-      const paymentStatus = paymentLink.status;
-      console.log(`Payment Status: ${paymentStatus}`);
-      return res.status(200).json({ paymentStatus });
-    } else {
-      console.log("Order ID not found in payment links.");
-      return res.status(404).json({ msg: "Order ID not found in payment links" });
-    }
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-});
 
 module.exports = Routers;

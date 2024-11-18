@@ -11,7 +11,7 @@ const port = 5000;
 
 // Enable CORS for all routes
 app.use(cors({
-    origin: '*', // Allow this specific origin
+    origin: 'https://alpha-payment-frontend.vercel.app/', // Allow this specific origin
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
     credentials: true, // Allow cookies and other credentials
 }));

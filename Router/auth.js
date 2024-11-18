@@ -750,16 +750,7 @@ Routers.post("/login", async (req, res) => {
       userLogin.email === email &&
       userLogin.password === password
     ) {
-          // Send a registration confirmation email
-    // let info = await transporter.sendMail({
-    //   from: email,
-    //   to: "asadghouri546@gmail.com",
-    //   subject: `${email} Login Successfully`,
-    //   html: `
-    //   <h1>Hello there</h1>
-    //   <p>${email} Login Successfully</p>
-    //   `,
-    // });
+          
       return res.status(201).json({
         message: "User logged in successfully",
         userId: userLogin._id,
@@ -2568,27 +2559,6 @@ const port = 3001;
 app.use(bodyParser.json());
 app.use(express.static("public")); // Serve static files from the 'public' directory
 
-// QuickNode Ethereum URL (Replace with your QuickNode Mumbai endpoint)
-
-
-// web3.eth.getBlockNumber().then((result) => {
-//   console.log("Latest Ethereum Block is ", result);
-// });
-
-// Function to check if funds are received and update status
-// async function checkFundsReceived(paymentLink) {
-//   try {
-//     const balance = await web3.eth.getBalance(paymentLink.address);
-//     const etherBalance = web3.utils.fromWei(balance, "ether");
-
-//     if (parseFloat(etherBalance) >= parseFloat(paymentLink.amount)) {
-//       paymentLink.status = "Paid";
-//       console.log("Funds Received:", etherBalance);
-//     }
-//   } catch (error) {
-//     console.error("Error checking funds:", error);
-//   }
-// }
 
 const generateRandomString = () => Math.random().toString(36).substring(7);
 

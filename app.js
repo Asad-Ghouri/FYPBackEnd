@@ -1,11 +1,13 @@
 const express = require('express');
-const cors = require('cors'); // Import cors
+const cors = require('cors');
 const dotenv = require('dotenv');
 
+// Initialize app
 const app = express();
 
+// Load environment variables
 dotenv.config({ path: './config.env' });
-require('./DB/connection');
+require('./DB/connection'); // Ensure the database connection is established
 
 const port = process.env.PORT || 5000;
 
@@ -18,14 +20,22 @@ app.use(
   })
 );
 
-// Parse JSON
+// Parse JSON payloads
 app.use(express.json());
 
-// Prefix all routes with '/api'
+// Load and prefix routes with '/api'
 const authRoutes = require('./Router/auth.js');
-app.use('/api', authRoutes); // All endpoints in auth.js will now have '/api' prefixed
+app.use('/api', authRoutes); // Add '/api' prefix to all routes in auth.js
+
+// Handle unknown routes
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'NOT_FOUND',
+    message: `The requested URL ${req.originalUrl} was not found on this server.`,
+  });
+});
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server is running at localhost:${port}`);
+  console.log(`Server is running at http://localhost:${port}`);
 });

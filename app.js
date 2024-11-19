@@ -43,10 +43,10 @@ const app = express();
 const cors = require('cors');
 require('./DB/connection');
 app.use(express.json());
-
+const port =  5000;
 
 app.use(cors());
 app.use('/api', require('./api/auth.js'));
-app.listen(process.env.PORT, () => {
-  console.log(`Server is running at localhost:${process.env.PORT}`);
+app.listen(port, () => {
+  console.log(`Server is running at localhost:${port}`);
 });

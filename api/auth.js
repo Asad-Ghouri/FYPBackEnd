@@ -1,7 +1,7 @@
 const express = require("express");
 const Routers = express.Router();
 const User = require("../Modles/User");
-const Admin = require('../Modles/Admin');
+const Admin = require('../Modles/admin');
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid"); // For generating unique IDs
 const bodyParser = require("body-parser");

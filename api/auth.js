@@ -2,62 +2,14 @@ const express = require("express");
 const Routers = express.Router();
 const User = require("../Modles/User");
 const Admin = require('../Modles/admin');
-const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid"); // For generating unique IDs
 const bodyParser = require("body-parser");
 const Wallet = require("ethereumjs-wallet");
-const util = require('util');
-const Tx = require("ethereumjs-tx");
 const Web3 = require("web3");
-const ethereumjsutil = require("ethereumjs-util");
 const qrcode = require("qrcode");
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const nodemailer = require('nodemailer');
-const db = "mongodb+srv://asadghouri546:asadghouri546@cluster0.wirmp0f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-const twilio = require('twilio');
 
-const stripe = require('stripe')("sk_test_51ODucNSBUBnZdF2vZ4rTegts3FCMI9IczAYi4IU9kNOhtFrO7PN2wWAsvUTVUpfis2xmwBZTdSXzOWU69idYfoEi00eTy3Le68");
-
-
-Routers.post("/stripe", async (req, res) => {
-  try {
-      // Debug logging
-      console.log("Received request with body:", req.body);
-
-      // De-structure the priceId from the request body
-      const { priceId } = req.body;
-
-      // Now, check if the priceId is not undefined or null
-      if(!priceId) {
-          console.error("Price ID not provided in the request body");
-          return res.status(400).send({error: 'Price ID not provided in the request body'});
-      }
-
-      // Debug logging
-      console.log(`Creating stripe checkout session with priceId: ${priceId}`);
-
-      const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          line_items: [
-              {
-                  price: priceId,
-                  quantity: 1,
-              },
-          ],
-          mode: 'subscription',
-          success_url: 'http://localhost:3000/dashboard?message=authenticate', // change it for production
-          cancel_url: 'http://localhost:3000/sign-in', // change it for production
-      });
-
-      console.log(`Stripe session created with ID: ${session.id}`);
-
-      return res.json({ id: session.id });
-
-  } catch (error) {
-      console.error("An error occurred:", error);
-      return res.status(500).send({error: 'An error occurred while creating the checkout session.'});
-  }
-});
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com", // SMTP server address (usually mail.your-domain.com)
@@ -131,6 +83,26 @@ Routers.post("/login", async (req, res) => {
     } else {
       return res.status(400).json({ error: "Invalid Credentials" });
     }
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+Routers.post("/Registration", async (req, res) => {
+  try {
+    const { Name, email, password } = req.body;
+    if (!Name || !email || !password) {
+      return res
+        .status(422)
+        .json({ error: "Please fill all the fields properly" });
+    }
+    const userExist = await User.findOne({ email: email });
+    if (userExist) {
+      return res.status(422).json({ error: "Email already exists" });
+    }
+    const user = new User({ Name, email, password });
+    await user.save();
+    return res.status(201).json({ message: "User registered successfully" });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }

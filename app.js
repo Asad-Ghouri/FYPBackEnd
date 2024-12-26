@@ -13,7 +13,7 @@ const port = 5000;
   app.use(cors({
     origin: [
       'http://localhost:3000', // Local frontend development
-      'https://fyp-back-end-bay.vercel.app' // Replace with your Vercel app URL
+      'https://alpha-payment-frontend.vercel.app' // Replace with your Vercel app URL
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true, // Allow cookies if needed

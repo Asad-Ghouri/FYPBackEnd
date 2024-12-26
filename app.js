@@ -9,18 +9,18 @@ const port = 5000;
 // Connect to the database before starting the server
 (async () => {
   await connectDB(); // Await the database connection
-
+  
+  // Add CORS configuration
   app.use(cors({
     origin: [
-      'http://localhost:3000', // Local frontend development
-      'https://alpha-payment-frontend.vercel.app' // Replace with your Vercel app URL
+      'http://localhost:3000', // Local frontend for development
+      'https://alpha-payment-frontend.vercel.app' // Deployed frontend on Vercel
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true, // Allow cookies if needed
   }));
 
   app.use(express.json());
-  app.use(cors());
   app.use('/api', require('./api/auth.js'));
 
   // Start the server only after DB connection is successful

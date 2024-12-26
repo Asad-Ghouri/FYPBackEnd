@@ -9,7 +9,12 @@ const Web3 = require("web3");
 const qrcode = require("qrcode");
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const nodemailer = require('nodemailer');
+//
 
+const app = express();
+
+app.use(bodyParser.json());
+app.use(express.static("public")); // Serve static files from the 'public' directory
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com", // SMTP server address (usually mail.your-domain.com)
@@ -2375,13 +2380,7 @@ Routers.get('/GetDatabyApiKey', async (req, res) => {
   }
 });
 
-//
 
-const app = express();
-const port = 3001;
-
-app.use(bodyParser.json());
-app.use(express.static("public")); // Serve static files from the 'public' directory
 
 
 const generateRandomString = () => Math.random().toString(36).substring(7);
